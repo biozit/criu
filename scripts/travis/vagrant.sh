@@ -49,4 +49,15 @@ fedora-no-vdso() {
 	ssh default 'cd /vagrant/criu/test; sudo ./zdtm.py run -a --keep-going'
 }
 
+fedora-non-root() {
+	ssh default 'curl -s https://repos.fedorapeople.org/repos/thl/kernel-vanilla.repo | sudo tee /etc/yum.repos.d/kernel-vanilla.repo'
+	ssh default 'sudo dnf -y --enablerepo=kernel-vanilla-mainline update'
+	vagrant reload
+	ssh default uname -a
+	ssh default 'cd /vagrant; git clone https://git.kernel.org/pub/scm/linux/kernel/git/morgan/libcap.git; cd libcap; make -C progs'
+	ssh default 'cd /vagrant; tar xf criu.tar; cd criu; make -j 4'
+	ssh default 'sudo /vagrant/libcap/progs/setcap cap_checkpoint_restore+eip /vagrant/criu/criu/criu'
+	ssh default 'cd /vagrant/criu; sudo ./test/zdtm.py run -t zdtm/static/env00 -f h; sudo chmod 777 test test/zdtm/static/; sudo ./test/zdtm.py run -t zdtm/static/env00 -f h --user'
+}
+
 $1
