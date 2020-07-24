@@ -174,6 +174,14 @@ struct cr_options {
 
 	/* This stores which method to use for file validation. */
 	int 			file_validation_method;
+	char			*argv_0;
+	/*
+	 * This contains the UID of the current CRIU user. It
+	 * will only be set to a non-zero value if CRIU has
+	 * the necessary capabilities to run as non root.
+	 * CAP_CHECKPOINT_RESTORE or CAP_SYS_ADMIN
+	 */
+	uid_t			uid;
 };
 
 extern struct cr_options opts;
