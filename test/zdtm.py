@@ -35,6 +35,8 @@ STREAMED_IMG_FILE_NAME = "img.criu"
 
 prev_line = None
 
+NON_ROOT_UID = 65534
+
 
 def alarm(*args):
     print("==== ALARM ====")
@@ -437,6 +439,8 @@ class zdtm_test:
         wait_pid_die(int(self.__pid), self.__name, self.__timeout)
 
     def __add_wperms(self):
+        if os.getuid() != 0:
+            return
         # Add write perms for .out and .pid files
         for b in self._bins:
             p = os.path.dirname(b)
@@ -618,6 +622,8 @@ class zdtm_test:
 
     @staticmethod
     def cleanup():
+        if opts['non_root']:
+            return
         subprocess.check_call(
             ["flock", "zdtm_mount_cgroups.lock", "./zdtm_umount_cgroups"])
 
@@ -1037,6 +1043,7 @@ class criu:
         self.__criu_bin = opts['criu_bin']
         self.__crit_bin = opts['crit_bin']
         self.__pre_dump_mode = opts['pre_dump_mode']
+        self.__uid = NON_ROOT_UID if opts['non_root'] else 0
 
     def fini(self):
         if self.__lazy_migrate:
@@ -1288,6 +1295,9 @@ class criu:
         os.mkdir(self.__ddir())
         os.chmod(self.__ddir(), 0o777)
 
+        if self.__uid != 0:
+            os.setgid(self.__uid)
+            os.setuid(self.__uid)
         a_opts = ["-t", self.__test.getpid()]
         if self.__prev_dump_iter:
             a_opts += [
@@ -1363,6 +1373,9 @@ class criu:
                 raise test_fail_exc("criu page-server exited with %d" % ret)
 
     def restore(self):
+        if self.__uid != 0:
+            os.setgid(self.__uid)
+            os.setuid(self.__uid)
         r_opts = []
         if self.__restore_sibling:
             r_opts = ["--restore-sibling"]
@@ -1941,7 +1954,7 @@ class Launcher:
               'sat', 'script', 'rpc', 'lazy_pages', 'join_ns', 'dedup', 'sbs',
               'freezecg', 'user', 'dry_run', 'noauto_dedup',
               'remote_lazy_pages', 'show_stats', 'lazy_migrate', 'stream',
-              'tls', 'criu_bin', 'crit_bin', 'pre_dump_mode')
+              'tls', 'criu_bin', 'crit_bin', 'pre_dump_mode', 'non_root')
         arg = repr((name, desc, flavor, {d: self.__opts[d] for d in nd}))
 
         if self.__use_log:
@@ -1951,6 +1964,9 @@ class Launcher:
             logf = None
             log = None
 
+        if opts['non_root']:
+            os.setgid(NON_ROOT_UID)
+            os.setuid(NON_ROOT_UID)
         sub = subprocess.Popen(["./zdtm_ct", "zdtm.py"],
                                env=dict(os.environ, CR_CT_TEST_INFO=arg),
                                stdout=log,
@@ -2604,6 +2620,9 @@ rp.add_argument("--pre-dump-mode",
                 help="Use splice or read mode of pre-dumping",
                 choices=['splice', 'read'],
                 default='splice')
+rp.add_argument("--non-root",
+                help="Run criu as non-root",
+                action='store_true')
 
 lp = sp.add_parser("list", help="List tests")
 lp.set_defaults(action=list_tests)
