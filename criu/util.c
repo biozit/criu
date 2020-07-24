@@ -1334,6 +1334,9 @@ void rlimit_unlimit_nofile(void)
 {
 	struct rlimit new;
 
+	if (opts.uid)
+		return;
+
 	new.rlim_cur = kdat.sysctl_nr_open;
 	new.rlim_max = kdat.sysctl_nr_open;
 

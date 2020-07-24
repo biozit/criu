@@ -1323,6 +1323,8 @@ out:
 
 static int fchroot(int fd)
 {
+	if (opts.uid)
+		return 0;
 	/*
 	 * There's no such thing in syscalls. We can emulate
 	 * it using fchdir()

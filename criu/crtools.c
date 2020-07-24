@@ -109,6 +109,9 @@ int main(int argc, char *argv[], char *envp[])
 
 	log_set_loglevel(opts.log_level);
 
+	if (check_uid())
+		return 1;
+
 	if (optind < argc && !strcmp(argv[optind], "swrk")) {
 		if (argc != optind+2) {
 			fprintf(stderr, "Usage: criu swrk <fd>\n");
