@@ -35,6 +35,8 @@ STREAMED_IMG_FILE_NAME = "img.criu"
 
 prev_line = None
 
+NON_ROOT_UID = 65534
+
 
 def alarm(*args):
     print("==== ALARM ====")
@@ -437,6 +439,8 @@ class zdtm_test:
         wait_pid_die(int(self.__pid), self.__name, self.__timeout)
 
     def __add_wperms(self):
+        if os.getuid() != 0:
+            return
         # Add write perms for .out and .pid files
         for b in self._bins:
             p = os.path.dirname(b)
@@ -618,6 +622,8 @@ class zdtm_test:
 
     @staticmethod
     def cleanup():
+        if opts['user']:
+            return
         subprocess.check_call(
             ["flock", "zdtm_mount_cgroups.lock", "./zdtm_umount_cgroups"])
 
@@ -1129,7 +1135,10 @@ class criu:
         if action == "restore":
             preexec = None
         else:
-            preexec = self.__user and self.set_user_id or None
+            if os.getuid():
+                preexec = None
+            else:
+                preexec = self.__user and self.set_user_id or None
 
         __ddir = self.__ddir()
 
@@ -1288,6 +1297,9 @@ class criu:
         os.mkdir(self.__ddir())
         os.chmod(self.__ddir(), 0o777)
 
+        if self.__user:
+            os.setgid(NON_ROOT_UID)
+            os.setuid(NON_ROOT_UID)
         a_opts = ["-t", self.__test.getpid()]
         if self.__prev_dump_iter:
             a_opts += [
@@ -1363,6 +1375,9 @@ class criu:
                 raise test_fail_exc("criu page-server exited with %d" % ret)
 
     def restore(self):
+        if self.__user:
+            os.setgid(NON_ROOT_UID)
+            os.setuid(NON_ROOT_UID)
         r_opts = []
         if self.__restore_sibling:
             r_opts = ["--restore-sibling"]
@@ -1986,6 +2001,9 @@ class Launcher:
             logf = None
             log = None
 
+        if opts['user']:
+            os.setgid(NON_ROOT_UID)
+            os.setuid(NON_ROOT_UID)
         sub = subprocess.Popen(["./zdtm_ct", "zdtm.py"],
                                env=dict(os.environ, CR_CT_TEST_INFO=arg),
                                stdout=log,
