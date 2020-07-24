@@ -1593,7 +1593,7 @@ int check_uid(void)
 {
 	const char *attribute = "security.capability";
 	const char *criu = "/proc/self/exe";
-	uid_t uid = getuid();
+	uid_t uid = geteuid();
 	int exit_code = -1;
 	char *caps = NULL;
 	u32 magic;
