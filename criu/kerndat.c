@@ -829,6 +829,9 @@ static int kerndat_try_load_cache(void)
 {
 	int fd, ret;
 
+	if (opts.uid)
+		return 1;
+
 	fd = open(KERNDAT_CACHE_FILE, O_RDONLY);
 	if (fd < 0) {
 		if(ENOENT == errno)
@@ -863,6 +866,9 @@ static void kerndat_save_cache(void)
 {
 	int fd, ret;
 	struct statfs s;
+
+	if (opts.uid)
+		return;
 
 	fd = open(KERNDAT_CACHE_FILE_TMP, O_CREAT | O_EXCL | O_WRONLY, 0600);
 	if (fd < 0)
@@ -1065,7 +1071,8 @@ int kerndat_init(void)
 	memset(&kdat, 0, sizeof(kdat));
 
 	preload_socket_modules();
-	preload_netfilter_modules();
+	if (!opts.uid)
+		preload_netfilter_modules();
 
 	if (check_pagemap()) {
 		pr_err("check_pagemap failed when initializing kerndat.\n");
@@ -1099,9 +1106,31 @@ int kerndat_init(void)
 		pr_err("get_ipv6 failed when initializing kerndat.\n");
 		ret = -1;
 	}
-	if (!ret && kerndat_loginuid()) {
-		pr_err("kerndat_loginuid failed when initializing kerndat.\n");
+	if (!ret && kerndat_nsid()) {
+		pr_err("kerndat_nsid failed when initializing kerndat.\n");
 		ret = -1;
+	}
+	if (!opts.uid) {
+		if (!ret && kerndat_loginuid()) {
+			pr_err("kerndat_loginuid failed when initializing kerndat.\n");
+			ret = -1;
+		}
+		if (!ret && kerndat_tun_netns()) {
+			pr_err("kerndat_tun_netns failed when initializing kerndat.\n");
+			ret = -1;
+		}
+		if (!ret && kerndat_socket_unix_file()) {
+			pr_err("kerndat_socket_unix_file failed when initializing kerndat.\n");
+			ret = -1;
+		}
+		if (!ret && kerndat_link_nsid()) {
+			pr_err("kerndat_link_nsid failed when initializing kerndat.\n");
+			ret = -1;
+		}
+		if (!ret && kerndat_socket_netns()) {
+			pr_err("kerndat_socket_netns failed when initializing kerndat.\n");
+			ret = -1;
+		}
 	}
 	if (!ret && kerndat_iptables_has_xtlocks()) {
 		pr_err("kerndat_iptables_has_xtlocks failed when initializing kerndat.\n");
@@ -1113,22 +1142,6 @@ int kerndat_init(void)
 	}
 	if (!ret && kerndat_compat_restore()) {
 		pr_err("kerndat_compat_restore failed when initializing kerndat.\n");
-		ret = -1;
-	}
-	if (!ret && kerndat_tun_netns()) {
-		pr_err("kerndat_tun_netns failed when initializing kerndat.\n");
-		ret = -1;
-	}
-	if (!ret && kerndat_socket_unix_file()) {
-		pr_err("kerndat_socket_unix_file failed when initializing kerndat.\n");
-		ret = -1;
-	}
-	if (!ret && kerndat_nsid()) {
-		pr_err("kerndat_nsid failed when initializing kerndat.\n");
-		ret = -1;
-	}
-	if (!ret && kerndat_link_nsid()) {
-		pr_err("kerndat_link_nsid failed when initializing kerndat.\n");
 		ret = -1;
 	}
 	if (!ret && kerndat_has_memfd_create()) {
@@ -1155,10 +1168,6 @@ int kerndat_init(void)
 	/* Depends on kerndat_vdso_fill_symtable() */
 	if (!ret && kerndat_vdso_preserves_hint()) {
 		pr_err("kerndat_vdso_preserves_hint failed when initializing kerndat.\n");
-		ret = -1;
-	}
-	if (!ret && kerndat_socket_netns()) {
-		pr_err("kerndat_socket_netns failed when initializing kerndat.\n");
 		ret = -1;
 	}
 	if (!ret && kerndat_x86_has_ptrace_fpu_xsave_bug()) {

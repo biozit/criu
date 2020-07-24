@@ -124,6 +124,9 @@ int main(int argc, char *argv[], char *envp[])
 		return cr_service_work(atoi(argv[optind+1]));
 	}
 
+	if (check_uid())
+		return 1;
+
 	if (check_options())
 		return 1;
 
