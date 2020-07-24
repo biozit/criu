@@ -22,6 +22,8 @@
 #include <sched.h>
 #include <sys/mount.h>
 #include <linux/aio_abi.h>
+#include <sys/xattr.h>
+#include <sys/capability.h>
 
 #include "../soccr/soccr.h"
 
@@ -1549,4 +1551,126 @@ static char *feature_name(int (*func)(void))
 			return fl->name;
 	}
 	return NULL;
+}
+
+#ifndef CAP_CHECKPOINT_RESTORE
+#define CAP_CHECKPOINT_RESTORE 40
+#endif
+
+static bool has_capability(int cap, struct vfs_cap_data *cap_data)
+{
+	int mask = CAP_TO_MASK(cap);
+	int index = CAP_TO_INDEX(cap);
+	u32 inheritable;
+	u32 permitted;
+
+	inheritable = le32toh(cap_data->data[index].inheritable);
+	permitted = le32toh(cap_data->data[index].permitted);
+
+	if (!(mask & permitted)) {
+		pr_debug("Capability %d not permitted\n", cap);
+		return false;
+	}
+
+	if (!(mask & inheritable)) {
+		pr_debug("Capability %d not inheritable\n", cap);
+		return false;
+	}
+
+	return true;
+}
+
+static int pr_set_dumpable(int value)
+{
+	int ret = prctl(PR_SET_DUMPABLE, value, 0, 0, 0);
+	if (ret < 0)
+		pr_perror("Unable to set PR_SET_DUMPABLE");
+	return ret;
+}
+
+int check_uid(void)
+{
+	const char *attribute = "security.capability";
+	const char *criu = "/proc/self/exe";
+	uid_t uid = geteuid();
+	int exit_code = -1;
+	char *caps = NULL;
+	u32 magic;
+	int ret;
+	int len;
+	int fd;
+
+	if (uid == 0)
+		return 0;
+
+	/*
+	 * If running as non-root CRIU either needs CAP_SYS_ADMIN or
+	 * CAP_CHECKPOINT_RESTORE and CAP_PTRACE.
+	 */
+
+	fd = open(criu, O_RDONLY);
+	if (fd < 0) {
+		pr_perror("Opening %s failed", criu);
+		return -1;
+	}
+
+	len = fgetxattr(fd, attribute, caps, 0);
+	if (len == -1) {
+		/*
+		 * If this fails with ENODATA or ENOTSUP the criu binary
+		 * does not have any attributes set and cannot be used
+		 * as non-root.
+		 */
+		if (!(errno == ENOTSUP || errno == ENODATA))
+			pr_perror("Reading xattr %s from %s failed", attribute, criu);
+		goto out_close;
+	}
+
+	caps = xmalloc(len);
+	if (!caps) {
+		pr_err("xmalloc to read xattr %s for %s failed\n", attribute, criu);
+		goto out_close;
+	}
+
+	ret = fgetxattr(fd, attribute, caps, len);
+	if (len != ret) {
+		pr_perror("Reading xattr %s from %s failed", attribute, criu);
+		goto out_free;
+	}
+	magic = le32toh(((struct vfs_cap_data *)caps)->magic_etc) & ~VFS_CAP_FLAGS_EFFECTIVE;
+	if (magic != VFS_CAP_REVISION_2 && magic != VFS_CAP_REVISION_3) {
+		pr_err("Capability version 0x%x not understood\n", magic);
+		goto out_free;
+	}
+
+	/* CRIU requires CAP_SYS_ADMIN or CAP_CHECKPOINT_RESTORE */
+
+	if (!has_capability(CAP_CHECKPOINT_RESTORE, (struct vfs_cap_data *)caps) &&
+		!has_capability(CAP_SYS_ADMIN, (struct vfs_cap_data *)caps))
+		goto out_free;
+
+	/* Only set to non-zero if necessary capabilities are available. */
+	opts.uid = uid;
+
+	/*
+	 * At his point we know we are running as non-root with the necessary
+	 * capabilities available. Now we have to make the process dumpable
+	 * so that /proc/self is not owned by root.
+	 */
+	if (pr_set_dumpable(1))
+		goto out_free;
+
+	exit_code = 0;
+
+out_free:
+	free(caps);
+out_close:
+	close(fd);
+	if (exit_code) {
+		pr_msg("  CRIU needs to be run as root or needs to have the CAP_SYS_ADMIN or\n");
+		pr_msg("  the CAP_CHECKPOINT_RESTORE capability: \n\n");
+		pr_msg("    setcap cap_checkpoint_restore+eip %s\n", opts.argv_0);
+	}
+
+	return exit_code;
 }
