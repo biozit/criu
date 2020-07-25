@@ -23,6 +23,8 @@
 
 int ptrace_suspend_seccomp(pid_t pid)
 {
+	if (geteuid())
+		return 0;
 	if (ptrace(PTRACE_SETOPTIONS, pid, NULL, PTRACE_O_SUSPEND_SECCOMP) < 0) {
 		pr_perror("suspending seccomp failed");
 		return -1;

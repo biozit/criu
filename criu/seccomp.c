@@ -15,6 +15,7 @@
 #include "servicefd.h"
 #include "util.h"
 #include "rst-malloc.h"
+#include "cr_options.h"
 
 #include "protobuf.h"
 #include "images/seccomp.pb-c.h"
@@ -362,6 +363,9 @@ static int dump_seccomp_filters(void)
 
 int seccomp_collect_dump_filters(void)
 {
+	if (opts.uid)
+		return 0;
+
 	if (preorder_pstree_traversal(root_item, collect_filters) < 0)
 		return -1;
 

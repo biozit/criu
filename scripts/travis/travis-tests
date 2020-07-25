@@ -86,6 +86,14 @@ if [ "$WIDTH" -gt 80 ]; then
 	exit 1
 fi
 
+time make CC="$CC" -j4 -C test/zdtm
+# As long as Travis does not know about CAP_CHECKPOINT_RESTORE
+# this test is using CAP_SYS_ADMIN.
+setcap cap_sys_ptrace,cap_sys_admin+eip ./criu/criu
+# Running tests as non-root requires write access to the following directories
+chmod 777 test test/zdtm/static/
+./test/zdtm.py run -t zdtm/static/env00 -f h --non-root --ignore-taint
+
 [ -n "$SKIP_TRAVIS_TEST" ] && exit 0
 
 ulimit -c unlimited

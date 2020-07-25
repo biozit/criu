@@ -617,6 +617,8 @@ class zdtm_test:
             subprocess.check_call(["make", "zdtm_ct"])
         if not os.access("zdtm/lib/libzdtmtst.a", os.F_OK):
             subprocess.check_call(["make", "-C", "zdtm/"])
+        if opts['non_root']:
+            return
         subprocess.check_call(
             ["flock", "zdtm_mount_cgroups.lock", "./zdtm_mount_cgroups"])
 
