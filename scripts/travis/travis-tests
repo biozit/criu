@@ -9,6 +9,7 @@ TRAVIS_PKGS="protobuf-c-compiler libprotobuf-c-dev libaio-dev libgnutls28-dev
 
 if [ -e /etc/lsb-release ]; then
 	# This file does not exist on non Ubuntu
+	# shellcheck disable=SC1091
 	. /etc/lsb-release
 	if [ "$DISTRIB_RELEASE" = "16.04" ]; then
 		# There is one last test running on 16.04 because of the broken
@@ -24,7 +25,7 @@ fi
 
 X86_64_PKGS="gcc-multilib"
 
-UNAME_M=`uname -m`
+UNAME_M=$(uname -m)
 
 if [ "$UNAME_M" != "x86_64" ]; then
 	# For Travis only x86_64 seems to be baremetal. Other
@@ -41,12 +42,13 @@ max_apt_retries=5
 # hashsum mismatches, DNS errors and similar things
 apt_install () {
 	while true; do
-		let install_retry_counter+=1
+		(( install_retry_counter+=1 ))
 		if [ $install_retry_counter -gt $max_apt_retries ]; then
 			exit 1
 		fi
 		apt-get clean -qqy || continue
 		apt-get update -qqy || continue
+		# shellcheck disable=SC2068
 		apt-get install -qqy --no-install-recommends $@ && break
 
 		# In case it is a network error let's wait a bit.
@@ -81,7 +83,7 @@ travis_prep () {
 	}
 
 	# ccache support, only enable for non-GCOV case
-	if [ "$CCACHE" = "1" -a -z "$GCOV" ]; then
+	if [ "$CCACHE" = "1" ] && [ -z "$GCOV" ]; then
 		# ccache is installed by default, need to set it up
 		export CCACHE_DIR=$HOME/.ccache
 		[ "$CC" = "clang" ] && export CCACHE_CPP2=yes
@@ -95,8 +97,8 @@ travis_prep () {
 		TRAVIS_PKGS="$TRAVIS_PKGS $X86_64_PKGS"
 	fi
 
-	apt_install $TRAVIS_PKGS
-	chmod a+x $HOME
+	apt_install "$TRAVIS_PKGS"
+	chmod a+x "$HOME"
 
 	# zdtm uses an unversioned python binary to run the tests.
 	# let's point python to python3
@@ -107,7 +109,7 @@ test_stream() {
 	# We must test CRIU features that dump content into an image file to ensure
 	# streaming compatibility.
 	STREAM_TEST_PATTERN='.*(ghost|fifo|unlink|memfd|shmem|socket_queue).*'
-	./test/zdtm.py run --stream -p 2 --keep-going -T $STREAM_TEST_PATTERN $ZDTM_OPTS
+	./test/zdtm.py run --stream -p 2 --keep-going -T "$STREAM_TEST_PATTERN" "$ZDTM_OPTS"
 }
 
 travis_prep
@@ -130,7 +132,7 @@ fi
 
 ulimit -c unlimited
 
-echo "|`pwd`/test/abrt.sh %P %p %s %e" > /proc/sys/kernel/core_pattern
+echo "|$(pwd)/test/abrt.sh %P %p %s %e" > /proc/sys/kernel/core_pattern
 
 if [ "${COMPAT_TEST}x" = "yx" ] ; then
 	# Dirty hack to keep both ia32 & x86_64 shared libs on a machine:
@@ -145,20 +147,20 @@ if [ "${COMPAT_TEST}x" = "yx" ] ; then
 
 	mkdir "$REFUGE"
 	for i in $INCOMPATIBLE_LIBS ; do
-		for j in $(dpkg --listfiles $i | grep '\.so$') ; do
+		for j in $(dpkg --listfiles "$i" | grep '\.so$') ; do
 			cp "$j" "$REFUGE/"
 		done
 		IA32_PKGS="$IA32_PKGS $i:i386"
 	done
-	apt-get remove $INCOMPATIBLE_LIBS
-	apt_install $IA32_PKGS
+	apt-get remove "$INCOMPATIBLE_LIBS"
+	apt_install "$IA32_PKGS"
 	mkdir -p /usr/lib/x86_64-linux-gnu/
 	mv "$REFUGE"/* /usr/lib/x86_64-linux-gnu/
 fi
 
 time make CC="$CC" -j4 -C test/zdtm
 
-[ -f "$CCACHE_LOGFILE" ] && cat $CCACHE_LOGFILE
+[ -f "$CCACHE_LOGFILE" ] && cat "$CCACHE_LOGFILE"
 
 # umask has to be called before a first criu run, so that .gcda (coverage data)
 # files are created with read-write permissions for all.
@@ -187,11 +189,11 @@ if [ "${STREAM_TEST}" = "1" ]; then
 	exit 0
 fi
 
-./test/zdtm.py run -a -p 2 --keep-going $ZDTM_OPTS
+./test/zdtm.py run -a -p 2 --keep-going "$ZDTM_OPTS"
 
-KERN_MAJ=`uname -r | cut -d. -f1`
-KERN_MIN=`uname -r | cut -d. -f2`
-if [ $KERN_MAJ -ge "4" ] && [ $KERN_MIN -ge "18" ]; then
+KERN_MAJ=$(uname -r | cut -d. -f1)
+KERN_MIN=$(uname -r | cut -d. -f2)
+if [ "$KERN_MAJ" -ge "4" ] && [ "$KERN_MIN" -ge "18" ]; then
 	LAZY_EXCLUDE="-x cmdlinenv00 -x maps007"
 else
 	LAZY_EXCLUDE="-x maps007 -x fork -x fork2 -x uffd-events -x cgroupns
@@ -200,12 +202,12 @@ else
 fi
 LAZY_EXCLUDE="$LAZY_EXCLUDE -x maps04"
 
-LAZY_TESTS=.*\(maps0\|uffd-events\|lazy-thp\|futex\|fork\).*
+LAZY_TESTS='.*\(maps0\|uffd-events\|lazy-thp\|futex\|fork\).*'
 LAZY_OPTS="-p 2 -T $LAZY_TESTS $LAZY_EXCLUDE $ZDTM_OPTS"
 
-./test/zdtm.py run $LAZY_OPTS --lazy-pages
-./test/zdtm.py run $LAZY_OPTS --remote-lazy-pages
-./test/zdtm.py run $LAZY_OPTS --remote-lazy-pages --tls
+./test/zdtm.py run "$LAZY_OPTS" --lazy-pages
+./test/zdtm.py run "$LAZY_OPTS" --remote-lazy-pages
+./test/zdtm.py run "$LAZY_OPTS" --remote-lazy-pages --tls
 
 bash ./test/jenkins/criu-fault.sh
 bash ./test/jenkins/criu-fcg.sh
