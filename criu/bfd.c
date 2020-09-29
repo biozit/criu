@@ -198,7 +198,6 @@ again:
 
 		if (b->sz == BUFSIZE) {
 			pr_err("The bfd buffer is too small\n");
-			ERR_PTR(-EIO);
 			return NULL;
 		}
 		/*
