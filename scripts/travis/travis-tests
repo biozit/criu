@@ -93,6 +93,8 @@ test_stream() {
 
 travis_prep
 
+[ -n "$SKIP_TRAVIS_BUILD" ] && exit 0
+
 export GCOV
 $CC --version
 time make CC="$CC" -j4
