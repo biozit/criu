@@ -1455,6 +1455,7 @@ static int bind_on_deleted(int sk, struct unix_sk_info *ui)
 	memcpy(path, ui->name, ui->ue->name.len);
 	path[ui->ue->name.len] = '\0';
 
+	/* coverity[toctou] */
 	pos = dirname(path);
 	pr_debug("ghost: socket id %#x ino %u name %s creating %s\n",
 		 ui->ue->id, ui->ue->ino, ui->name, pos);
