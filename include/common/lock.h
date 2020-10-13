@@ -9,10 +9,12 @@
 #include "common/asm/atomic.h"
 #include "common/compiler.h"
 
+#ifndef __clang_analyzer__
 #define LOCK_BUG_ON(condition)							\
 	if ((condition))							\
 		*(volatile unsigned long *)NULL = 0xdead0000 + __LINE__
 #define LOCK_BUG()	LOCK_BUG_ON(1)
+#endif /* __clang_analyzer__ */
 
 #ifdef CR_NOGLIBC
 # include <compel/plugins/std/syscall.h>
