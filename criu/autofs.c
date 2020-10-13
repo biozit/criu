@@ -331,12 +331,14 @@ static int autofs_revisit_options(struct mount_info *pm)
 {
 	FILE *f;
 	char *str;
+	char *org;
 	int ret = -ENOMEM;
 
 	str = xmalloc(1024);
 	if (!str) {
 		return -ENOMEM;
 	}
+	org = str;
 
 	f = fopen_proc(getpid(), "mountinfo");
 	if (!f)
@@ -376,7 +378,7 @@ static int autofs_revisit_options(struct mount_info *pm)
 close_proc:
 	fclose(f);
 free_str:
-	free(str);
+	free(org);
 	return ret;
 }
 
