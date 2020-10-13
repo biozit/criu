@@ -14,7 +14,7 @@
 # define __raise() raise(SIGABRT)
 #endif
 
-#ifndef __clang_analyzer__
+#if !defined(__clang_analyzer__) && !defined(__CPPCHECK__)
 # ifndef pr_err
 #  error pr_err macro must be defined
 # endif
