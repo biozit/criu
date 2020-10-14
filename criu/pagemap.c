@@ -246,6 +246,10 @@ static int read_local_page(struct page_read *pr, unsigned long vaddr,
 	ssize_t ret;
 	size_t curr = 0;
 
+	if (fd < 0) {
+		pr_err("Failed getting raw image fd\n");
+		return -1;
+	}
 	/*
 	 * Flush any pending async requests if any not to break the
 	 * linear reading from the pages.img file.
