@@ -610,6 +610,7 @@ static int unix_resolve_name(int lfd, uint32_t id, struct unix_sk_desc *d,
 	snprintf(rpath, sizeof(rpath), ".%s", name);
 	if (fstatat(mntns_root, rpath, &st, 0)) {
 		if (errno != ENOENT) {
+			/* coverity[bad_printf_format_string] */
 			pr_warn("Can't stat socket %#x(%s), skipping: %m (err %d)\n",
 				id, rpath, errno);
 			goto skip;
