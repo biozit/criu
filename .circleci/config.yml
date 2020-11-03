@@ -1,0 +1,11 @@
+version: 2.1
+jobs:
+  build:
+    machine:
+      image: ubuntu-2004:202010-01
+    working_directory: ~/criu
+    steps:
+      - checkout
+      - run:
+          name: "Testing"
+          command: sudo make -C scripts/travis local
