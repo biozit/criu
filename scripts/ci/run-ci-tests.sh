@@ -186,9 +186,12 @@ LAZY_EXCLUDE="$LAZY_EXCLUDE -x maps04"
 LAZY_TESTS='.*\(maps0\|uffd-events\|lazy-thp\|futex\|fork\).*'
 LAZY_OPTS="-p 2 -T $LAZY_TESTS $LAZY_EXCLUDE $ZDTM_OPTS"
 
-./test/zdtm.py run "$LAZY_OPTS" --lazy-pages
-./test/zdtm.py run "$LAZY_OPTS" --remote-lazy-pages
-./test/zdtm.py run "$LAZY_OPTS" --remote-lazy-pages --tls
+# shellcheck disable=SC2086
+./test/zdtm.py run $LAZY_OPTS --lazy-pages
+# shellcheck disable=SC2086
+./test/zdtm.py run $LAZY_OPTS --remote-lazy-pages
+# shellcheck disable=SC2086
+./test/zdtm.py run $LAZY_OPTS --remote-lazy-pages --tls
 
 bash ./test/jenkins/criu-fault.sh
 bash ./test/jenkins/criu-fcg.sh
@@ -199,7 +202,11 @@ if [ -z "$SKIP_EXT_DEV_TEST" ]; then
 fi
 #make -C test/others/exec/ run
 make -C test/others/make/ run CC="$CC"
-make -C test/others/shell-job/ run
+if [ -n "$TRAVIS" ]; then
+       # GitHub Actions does not provide a real TTY and CRIU will fail with:
+       # Error (criu/tty.c:1014): tty: Don't have tty to inherit session from, aborting
+       make -C test/others/shell-job/ run
+fi
 make -C test/others/rpc/ run
 
 ./test/zdtm.py run -t zdtm/static/env00 --sibling
@@ -229,5 +236,3 @@ make -C test/others/libcriu run
 
 # external namespace testing
 make -C test/others/ns_ext run
-
-make -C test/others/shell-job
