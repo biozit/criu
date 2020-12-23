@@ -54,8 +54,10 @@ ci_prep () {
 	CC=gcc
 	# clang support
 	if [ "$CLANG" = "1" ]; then
-		CI_PKGS="$CI_PKGS clang"
-		CC=clang
+		echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main" > /etc/apt/sources.list.d/clang-11.list
+		curl -s https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+		CI_PKGS="$CI_PKGS clang-11"
+		CC=clang-11
 	fi
 
 	[ -n "$GCOV" ] && {
@@ -77,6 +79,11 @@ ci_prep () {
 	# Do not install x86_64 specific packages on other architectures
 	if [ "$UNAME_M" = "x86_64" ]; then
 		CI_PKGS="$CI_PKGS $X86_64_PKGS"
+	fi
+
+	if [ -n "$CIRCLECI" ]; then
+		# Silence a few apt error messages
+		rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google.list
 	fi
 
 	scripts/ci/apt-install "$CI_PKGS"
