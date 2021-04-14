@@ -4,5 +4,5 @@ require:
   - git
   - make
   - python3
-test: SKIP_CI_PREP=1 CC=gcc ./run-ci-tests.sh
+test: ./prepare-for-fedora-rawhide.sh; SKIP_CI_PREP=1 CC=gcc ./run-ci-tests.sh
 duration: 60m
