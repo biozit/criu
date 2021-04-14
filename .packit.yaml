@@ -23,9 +23,11 @@ jobs:
   trigger: pull_request
   metadata:
     targets:
-    - fedora-all
+    - fedora-all-x86_64
+    - fedora-all-aarch64
 - job: tests
   trigger: pull_request
   metadata:
     targets:
-    - fedora-all
+    - fedora-all-x86_64
+    - fedora-all-aarch64
