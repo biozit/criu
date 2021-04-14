@@ -2,8 +2,7 @@ summary:
     Run CI test suite
 require:
   - git
-  - libvirt-python3
   - make
   - python3
-test: ./run-ci-tests.sh
+test: SKIP_CI_PREP=1 ./run-ci-tests.sh
 duration: 60m
