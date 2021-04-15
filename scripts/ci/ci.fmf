@@ -4,5 +4,12 @@ require:
   - git
   - make
   - python3
-test: setenforce 0; ./prepare-for-fedora-rawhide.sh; ln -sf /usr/include/google/protobuf/descriptor.proto ../../images/google/protobuf/descriptor.proto; CD_TO_TOP=1 SKIP_CI_PREP=1 CC=gcc ./run-ci-tests.sh
+prepare:
+  how: shell
+  script:
+    - setenforce 0
+    - getenforce
+    - ./prepare-for-fedora-rawhide.sh
+    - ln -sf /usr/include/google/protobuf/descriptor.proto ../../images/google/protobuf/descriptor.proto
+test: getenforce; CD_TO_TOP=1 SKIP_CI_PREP=1 CC=gcc ./run-ci-tests.sh
 duration: 60m
