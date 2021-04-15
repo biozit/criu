@@ -217,6 +217,8 @@ LAZY_EXCLUDE="-x maps04 -x cmdlinenv00 -x maps007"
 LAZY_TESTS='.*(maps0|uffd-events|lazy-thp|futex|fork).*'
 LAZY_OPTS="-p 2 -T $LAZY_TESTS $LAZY_EXCLUDE $ZDTM_OPTS"
 
+echo 1 > /proc/sys/vm/unprivileged_userfaultfd
+
 # shellcheck disable=SC2086
 ./test/zdtm.py run $LAZY_OPTS --lazy-pages --keep-going
 # shellcheck disable=SC2086
