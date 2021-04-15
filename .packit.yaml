@@ -30,4 +30,3 @@ jobs:
   metadata:
     targets:
     - fedora-all-x86_64
-    - fedora-all-aarch64
