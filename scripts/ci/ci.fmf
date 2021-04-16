@@ -9,5 +9,5 @@ test:
   dnf install -y libselinux-devel
   systemctl stop sssd
   ln -sf /usr/include/google/protobuf/descriptor.proto ../../images/google/protobuf/descriptor.proto
-  ./run-ci-tests.sh'
+  ./run-ci-tests.sh
 duration: 60m
