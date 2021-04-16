@@ -90,6 +90,7 @@ print_header() {
 }
 
 print_env() {
+	set +x
 	# As this script can run on multiple different CI systems
 	# the following lines should give some context to the
 	# evnvironment of this CI run.
@@ -105,6 +106,17 @@ print_env() {
 	[ -e /etc/lsb-release ] && cat /etc/lsb-release
 	[ -e /etc/redhat-release ] && cat /etc/redhat-release
 	[ -e /etc/alpine-release ] && cat /etc/alpine-release
+	if [ -e /etc/os-release ]; then
+		# shellcheck disable=SC1091
+		. /etc/os-release
+		if [ "${NAME}" = "Fedora" ] && [ "${VERSION_ID}" = "33" ]; then
+			# The tun_ns test fails only on Fedora 33 with
+			# Error (criu/net.c:1818): IP tool failed on route save'
+			# Skip it
+			ZDTM_OPTS="$ZDTM_OPTS -x zdtm/static/tun_ns"
+		fi
+	fi
+
 	print_header "ulimit -a"
 	ulimit -a
 	print_header "Available memory"
@@ -116,6 +128,7 @@ print_env() {
 	fi
 	print_header "Available CPUs"
 	lscpu || :
+	set -x
 }
 
 print_env
