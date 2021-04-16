@@ -115,6 +115,14 @@ print_env() {
 			# Skip it
 			ZDTM_OPTS="$ZDTM_OPTS -x zdtm/static/tun_ns"
 		fi
+		if [ "${NAME}" = "Fedora" ] && [ "${VERSION_ID}" = "35" ]; then
+			# Error injection fails on Fedora 35
+			KERN_MAJ=$(uname -r | cut -d. -f1)
+			KERN_MIN=$(uname -r | cut -d. -f2)
+			if [ "$KERN_MAJ" = "5" ] && [ "$KERN_MIN" -gt "11" ]; then
+				SKIP_CRIU_FAULT=1
+			fi
+		fi
 	fi
 
 	print_header "ulimit -a"
@@ -243,7 +251,10 @@ fi
 # shellcheck disable=SC2086
 ./test/zdtm.py run $LAZY_OPTS --remote-lazy-pages --tls --keep-going
 
-bash -x ./test/jenkins/criu-fault.sh
+if [ -n "$SKIP_CRIU_FAULT" ]; then
+	bash -x ./test/jenkins/criu-fault.sh
+fi
+
 if [ "$UNAME_M" == "x86_64" ]; then
 	# This fails on aarch64 (aws-graviton2) with:
 	# 33: ERR: thread-bomb.c:49: pthread_attr_setstacksize(): 22
