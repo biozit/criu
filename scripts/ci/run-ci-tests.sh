@@ -217,7 +217,11 @@ LAZY_EXCLUDE="-x maps04 -x cmdlinenv00 -x maps007"
 LAZY_TESTS='.*(maps0|uffd-events|lazy-thp|futex|fork).*'
 LAZY_OPTS="-p 2 -T $LAZY_TESTS $LAZY_EXCLUDE $ZDTM_OPTS"
 
-echo 1 > /proc/sys/vm/unprivileged_userfaultfd
+if [ -e /proc/sys/vm/unprivileged_userfaultfd ]; then
+	# Starting with 5.2 to use usefaultfd in a user space
+	# this needs to be set.
+	echo 1 > /proc/sys/vm/unprivileged_userfaultfd
+fi
 
 # shellcheck disable=SC2086
 ./test/zdtm.py run $LAZY_OPTS --lazy-pages --keep-going
