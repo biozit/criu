@@ -830,21 +830,18 @@ static int do_restore_tty_parms(void *arg, int fd, pid_t pid)
 
 	if ((p->has & HAS_TERMIOS_L) &&
 			ioctl(fd, TIOCSLCKTRMIOS, &p->tl) < 0)
-		goto err;
+		goto ok;
 
 	if ((p->has & HAS_TERMIOS) &&
 			ioctl(fd, TCSETS, &p->t) < 0)
-		goto err;
+		goto ok;
 
 	if ((p->has & HAS_WINS) &&
 			ioctl(fd, TIOCSWINSZ, &p->w) < 0)
-		goto err;
-
+		goto ok;
+ok:
 	return 0;
 
-err:
-	pr_perror("Can't set tty params on %#x", p->tty_id);
-	return -1;
 }
 
 static int restore_tty_params(int fd, struct tty_info *info)
